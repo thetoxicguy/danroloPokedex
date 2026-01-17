@@ -8,8 +8,10 @@
 import CoreData
 
 struct PersistenceController {
+//    The control for our database (static sets this variable only for the class, not the instances of it)
     static let shared = PersistenceController()
 
+//    This variable controls the sample preview database
     @MainActor
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
@@ -29,8 +31,10 @@ struct PersistenceController {
         return result
     }()
 
+//    The variable that contains all the persistent data (as a database)
     let container: NSPersistentContainer
 
+//    Just a regular init funcion
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "danroloPokedex")
         if inMemory {
