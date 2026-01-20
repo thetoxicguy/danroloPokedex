@@ -19,16 +19,52 @@ struct ContentView: View {
     let fetcher = FetchService()
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 ForEach(pokedex) { pokemon in
-                    NavigationLink {
-                        Text(pokemon.name ?? "No name")
-                    } label: {
-                        Text(pokemon.name ?? "No name")
+//                    Usual code:
+//                    NavigationLink {
+//                        Text(pokemon.name ?? "No name")
+//                    } label: {
+//                        Text(pokemon.name ?? "No name")
+//                    }
+                    
+//                    Alternate code
+                    NavigationLink(value: pokemon) {
+                        AsyncImage(url: pokemon.sprite) { image in
+                            image
+                                .resizable()
+                                .scaledToFit()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 100, height: 100)
+                        VStack(alignment: .leading) {
+// Exclamation is because we are sure this data exists (instead of using nullish coallescing)
+                            Text(pokemon.name!.capitalized)
+                                .fontWeight(.bold)
+                            HStack {
+//                                Same here
+                                ForEach(pokemon.types!, id: \.self) { type in
+                                    Text(type.capitalized)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 13)
+                                        .padding(.vertical, 5)
+                                        .background(Color(type.capitalized))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
                     }
                 }
             }
+            .navigationTitle("Pokedex")
+            .navigationDestination(for: Pokemon.self) { pokemon in
+                Text(pokemon.name ?? "No name")
+            }
+
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
