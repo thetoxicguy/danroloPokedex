@@ -11,6 +11,8 @@ import CoreData
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
+    @FetchRequest<Pokemon>(sortDescriptors: []) private var all
+    
     @FetchRequest<Pokemon>(
         // Core Data sorting
         //        NSSortDescriptor(keyPath: \Pokemon.id, ascending: true) is the legacy one, instead of:
@@ -38,88 +40,128 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(pokedex) { pokemon in
-//                    Usual code:
-//                    NavigationLink {
-//                        Text(pokemon.name ?? "No name")
-//                    } label: {
-//                        Text(pokemon.name ?? "No name")
-//                    }
-                    
-//                    Alternate code
-                    NavigationLink(value: pokemon) {
-                        AsyncImage(url: pokemon.sprite) { image in
-                            image
-                                .resizable()
-                                .scaledToFit()
-                        } placeholder: {
-                            ProgressView()
+        if all.isEmpty {
+            ContentUnavailableView {
+                Label("No Pokemons available", image: .nopokemon)
+            } description: {
+                Text("There aren't any pokemon yet.\nPlease, fetch some Pokemon to get started!")
+            } actions: {
+                Button("Fetch Pokémon", systemImage: "antenna.radiowaves.left.and.right") {
+                    getPokemon(from: 1)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else {
+            NavigationStack {
+                List {
+                    Section {
+                        ForEach(pokedex) { pokemon in
+                            //                    Usual code:
+                            //                    NavigationLink {
+                            //                        Text(pokemon.name ?? "No name")
+                            //                    } label: {
+                            //                        Text(pokemon.name ?? "No name")
+                            //                    }
+                            
+                            //                    Alternate code
+                            NavigationLink(value: pokemon) {
+                                AsyncImage(url: pokemon.sprite) { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 100, height: 100)
+                                VStack(alignment: .leading) {
+                                    HStack {
+                                        // Exclamation is because we are sure this data exists (instead of using nullish coallescing)
+                                        Text(pokemon.name!.capitalized)
+                                            .fontWeight(.bold)
+                                        if pokemon.favorite {
+                                            Image(systemName: "star.fill")
+                                                .foregroundStyle(.yellow)
+                                        }
+                                    }
+                                    HStack {
+                                        //                                Same here
+                                        ForEach(pokemon.types!, id: \.self) { type in
+                                            Text(type.capitalized)
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundStyle(.black)
+                                                .padding(.horizontal, 13)
+                                                .padding(.vertical, 5)
+                                                .background(Color(type.capitalized))
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                }
+                            }
+//                            The default is .trailing
+                            .swipeActions(edge: .leading) {
+                                Button(
+                                    pokemon.favorite ? "Remove from favorites" : "Add to favorites",
+                                    systemImage: "star") {
+                                        pokemon.favorite.toggle()
+                                        do {
+                                            try viewContext.save()
+                                        } catch {
+                                            print(error)
+                                        }
+                                    }
+                                    .tint(pokemon.favorite ? .gray : .yellow)
+                            }
                         }
-                        .frame(width: 100, height: 100)
-                        VStack(alignment: .leading) {
-                            HStack {
-                                // Exclamation is because we are sure this data exists (instead of using nullish coallescing)
-                                Text(pokemon.name!.capitalized)
-                                    .fontWeight(.bold)
-                                if pokemon.favorite {
-                                    Image(systemName: "star.fill")
-                                        .foregroundStyle(.yellow)
+                    } footer: {
+                        if all.count < 151 {
+                            ContentUnavailableView {
+                                Label("Missing Pokémon", image: .nopokemon)
+                            } description: {
+                                Text("The fetch was interrupted!\nFetch the rest of the Pokémon")
+                            } actions: {
+                                Button("Fetch Pokémon", systemImage: "antenna.radiowaves.left.and.right") {
+                                    getPokemon(from: pokedex.count + 1)
                                 }
-                            }
-                            HStack {
-//                                Same here
-                                ForEach(pokemon.types!, id: \.self) { type in
-                                    Text(type.capitalized)
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.black)
-                                        .padding(.horizontal, 13)
-                                        .padding(.vertical, 5)
-                                        .background(Color(type.capitalized))
-                                        .clipShape(Capsule())
-                                }
-                            }
+                                .buttonStyle(.borderedProminent)}
                         }
                     }
                 }
-            }
-            .navigationTitle("Pokedex")
-            .searchable(text: $searchText, prompt: "Find a Pokémon")
-            .autocorrectionDisabled()
-            .onChange(of: searchText) {
-                pokedex.nsPredicate = dynamicPredicate
-            }
-            .onChange(of: filterByFavorites) {
-                pokedex.nsPredicate = dynamicPredicate
-            }
-            .navigationDestination(for: Pokemon.self) { pokemon in
-                Text(pokemon.name ?? "No name")
-            }
-
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        filterByFavorites.toggle()
-                    } label: {
-                        Label("Filter by Favorites", systemImage: filterByFavorites ? "star.fill" : "star")
-                    }
-                    .tint(.yellow)
+                .navigationTitle("Pokedex")
+                .searchable(text: $searchText, prompt: "Find a Pokémon")
+                .autocorrectionDisabled()
+                .onChange(of: searchText) {
+                    pokedex.nsPredicate = dynamicPredicate
                 }
-                ToolbarItem {
-                    Button("Add Item", systemImage: "plus") {
-                        getPokemon()
+                .onChange(of: filterByFavorites) {
+                    pokedex.nsPredicate = dynamicPredicate
+                }
+                .navigationDestination(for: Pokemon.self) { pokemon in
+                    Text(pokemon.name ?? "No name")
+                }
+                
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            filterByFavorites.toggle()
+                        } label: {
+                            Label("Filter by Favorites", systemImage: filterByFavorites ? "star.fill" : "star")
+                        }
+                        .tint(.yellow)
                     }
                 }
             }
         }
+//        These lines are for the usual behavior, we comment these to practice ContentUnavailableView
+//        .task {
+//            getPokemon()
+//        }
     }
-    private func getPokemon() {
+    private func getPokemon(from id: Int) {
         Task {
-            for id in 1..<152 {
+            for i in id..<152 {
                 do {
-                    let fetchedPokemon = try await fetcher.fetchPokemon(id)
+                    let fetchedPokemon = try await fetcher.fetchPokemon(i)
                     
 //                    Set the fetchedPokemon in terms of the database storage
                     let pokemon = Pokemon(context: viewContext)
@@ -133,7 +175,7 @@ struct ContentView: View {
                     pokemon.specialDefense = fetchedPokemon.specialDefense
                     pokemon.speed = fetchedPokemon.speed
                     pokemon.sprite = fetchedPokemon.sprite
-                    pokemon.shiny = fetchedPokemon.shiny                    
+                    pokemon.shiny = fetchedPokemon.shiny
 //                    Save the fetched
                     try viewContext.save()
                     
