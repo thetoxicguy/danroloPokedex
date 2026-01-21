@@ -11,8 +11,21 @@ struct PersistenceController {
 //    The control for our database (static sets this variable only for the class, not the instances of it)
     static let shared = PersistenceController()
 
-//    This variable controls the sample preview database
-    @MainActor
+//    ** This variable controls the sample preview database (See comment in PokemonDetail for the Preview)
+    static var previewPokemon: Pokemon {
+        let context = PersistenceController.preview.container.viewContext
+        
+//        We know this exists because we set it in the "preview" variable which loads in the preview ***
+        let fetchRequest: NSFetchRequest<Pokemon> = Pokemon.fetchRequest()
+        fetchRequest.fetchLimit = 1
+        
+        let results = try! context.fetch(fetchRequest)
+        
+//        Same as *** above
+        return results.first!
+    }
+//    This is usually used in apps, but in this case we don't need MainActor (which gives an error two lines above
+//    @MainActor
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
