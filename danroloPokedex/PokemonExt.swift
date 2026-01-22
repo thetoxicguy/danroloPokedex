@@ -38,9 +38,9 @@ extension Pokemon {
             Stat(id: 6, name: "Speed", value: speed)
         ]
     }
-    var highestSat: Stat {
+    var highestStat: Stat {
 //        This is the short version of the next comment
-        stats.max { $0.value < $1.value}
+        stats.max { $0.value < $1.value}!
 //        stats.max { stat1, stat2 in
 //            stat1.value < stat2.value
 //        }!
