@@ -17,7 +17,7 @@ struct PokemonDetail: View {
 //        GeometryReader { geo in
             ScrollView {
                 ZStack {
-                    Image(.normalgrasselectricpoisonfairy)
+                    Image(pokemon.background)
                         .resizable()
                         .scaledToFit()
 //                        .frame(width: geo.size.width, height: geo.size.height)
