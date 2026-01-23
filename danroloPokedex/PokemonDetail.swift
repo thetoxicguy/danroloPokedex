@@ -26,7 +26,7 @@ struct PokemonDetail: View {
                     //                    Image("\(pokemon.id!)-shiny")
                     //                        .
                     
-                    AsyncImage(url: pokemon.sprite) { image in
+                    AsyncImage(url: showShiny ? pokemon.shiny : pokemon.sprite ) { image in
                         image
 //                        Interpolation fixes the image aspect ratio
                             .interpolation(.none)
@@ -75,6 +75,16 @@ struct PokemonDetail: View {
             }
 //        }
         .navigationTitle(pokemon.name!.capitalized)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showShiny.toggle()
+                } label: {
+                    Image(systemName: showShiny ? "wand.and.stars" : "wand.and.stars.inverse")
+                        .tint(showShiny ? .yellow : .primary)
+                }
+            }
+        }
 //        .ignoresSafeArea()
     }
 }
