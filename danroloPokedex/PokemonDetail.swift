@@ -26,7 +26,7 @@ struct PokemonDetail: View {
                     //                    Image("\(pokemon.id!)-shiny")
                     //                        .
                     
-                    AsyncImage(url: showShiny ? pokemon.shiny : pokemon.sprite ) { image in
+                    AsyncImage(url: showShiny ? pokemon.shinyURL : pokemon.spriteURL ) { image in
                         image
 //                        Interpolation fixes the image aspect ratio
                             .interpolation(.none)

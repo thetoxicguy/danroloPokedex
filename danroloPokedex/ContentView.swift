@@ -65,7 +65,7 @@ struct ContentView: View {
                             
                             //                    Alternate code
                             NavigationLink(value: pokemon) {
-                                AsyncImage(url: pokemon.sprite) { image in
+                                AsyncImage(url: pokemon.spriteURL) { image in
                                     image
                                         .resizable()
                                         .scaledToFit()
@@ -164,7 +164,7 @@ struct ContentView: View {
                 do {
                     let fetchedPokemon = try await fetcher.fetchPokemon(i)
                     
-//                    Set the fetchedPokemon in terms of the database storage
+                    //                    Set the fetchedPokemon in terms of the database storage
                     let pokemon = Pokemon(context: viewContext)
                     pokemon.id = fetchedPokemon.id
                     pokemon.name = fetchedPokemon.name
@@ -175,15 +175,28 @@ struct ContentView: View {
                     pokemon.specialAttack = fetchedPokemon.specialAttack
                     pokemon.specialDefense = fetchedPokemon.specialDefense
                     pokemon.speed = fetchedPokemon.speed
-                    pokemon.sprite = fetchedPokemon.sprite
-                    pokemon.shiny = fetchedPokemon.shiny
-//                    Save the fetched
-                    try viewContext.save()
-                    
+                    pokemon.spriteURL = fetchedPokemon.spriteURL
+                    pokemon.shinyURL = fetchedPokemon.shinyURL
                 } catch {
                     print(error)
                 }
             }
+            await storeSprites()
+        }
+    }
+    
+    private func storeSprites() async {
+        do {
+            for pokemon in all {
+//                We get the content of the tuple at the slot 0
+                pokemon.sprite = try await URLSession.shared.data(from: pokemon.spriteURL!).0
+                pokemon.shiny = try await URLSession.shared.data(from: pokemon.shinyURL!).0
+//                    Save the fetched Pokémon images
+                try viewContext.save()
+                print("Sprite stored: \(pokemon.id): \(pokemon.name!.capitalized)")
+            }
+         } catch {
+             print(error)
         }
     }
 }
