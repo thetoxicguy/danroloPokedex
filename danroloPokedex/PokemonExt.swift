@@ -8,6 +8,22 @@
 import SwiftUI
 
 extension Pokemon {
+    var spriteImage:  Image {
+        if let data = sprite, let image =  UIImage(data: data) {
+            Image (uiImage: image)
+        } else {
+            Image(.bulbasaur)
+        }
+    }
+    
+    var shinyimage:  Image {
+        if let data = shiny, let image =  UIImage(data: data) {
+            Image (uiImage: image)
+        } else {
+            Image(.shinybulbasaur)
+        }
+    }
+
     var background: ImageResource {
         switch types![0] {
         case "rock", "ground", "steel", "fighting", "ghost", "dark", "psychic":
@@ -50,6 +66,6 @@ extension Pokemon {
 
 struct Stat: Identifiable {
     let id: Int // Identifier for the stat
-    var  name: String // The stat name
+    var name: String // The stat name
     var value: Int16 // The integer value of the stat
 }
