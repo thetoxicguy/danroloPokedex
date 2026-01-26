@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor // This thread is an important thread for our view (ContentView)
 struct FetchService {
     enum FetchError: Error {
         case badResponse

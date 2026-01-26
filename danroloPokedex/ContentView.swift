@@ -6,18 +6,22 @@
 //
 
 import SwiftUI
-import CoreData
+import SwiftData
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+//    @Environment(\.managedObjectContext) private var viewContext
     
-    @FetchRequest<Pokemon>(sortDescriptors: []) private var all
+    @Environment(\.modelContext) private var modelContext
     
-    @FetchRequest<Pokemon>(
-        // Core Data sorting
-        //        NSSortDescriptor(keyPath: \Pokemon.id, ascending: true) is the legacy one, instead of:
-        sortDescriptors: [SortDescriptor(\.id)], // ascending: true is the default behavior
-        animation: .default) private var pokedex //: FetchedResults<Pokemon> The type is already stated in line 14 to be fed into pokedex
+//    @FetchRequest<Pokemon>(sortDescriptors: []) private var all
+    
+//    @FetchRequest<Pokemon>(
+//        // Core Data sorting
+//        //        NSSortDescriptor(keyPath: \Pokemon.id, ascending: true) is the legacy one, instead of:
+//        sortDescriptors: [SortDescriptor(\.id)], // ascending: true is the default behavior
+//        animation: .default) private var pokedex //: FetchedResults<Pokemon> The type is already stated in line 14 to be fed into pokedex
+
+    @Query(sort: \Pokemon.id, animation: .default) private var pokedex: [Pokemon]
     
     @State private var searchText = ""
     @State var filterByFavorites = false
@@ -40,7 +44,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        if all.isEmpty {
+        if pokedex.isEmpty {
             ContentUnavailableView {
                 Label("No Pokemons available", image: .nopokemon)
             } description: {
@@ -84,7 +88,7 @@ struct ContentView: View {
                                 VStack(alignment: .leading) {
                                     HStack {
                                         // Exclamation is because we are sure this data exists (instead of using nullish coallescing)
-                                        Text(pokemon.name!.capitalized)
+                                        Text(pokemon.name.capitalized)
                                             .fontWeight(.bold)
                                         if pokemon.favorite {
                                             Image(systemName: "star.fill")
@@ -93,7 +97,7 @@ struct ContentView: View {
                                     }
                                     HStack {
                                         //                                Same here
-                                        ForEach(pokemon.types!, id: \.self) { type in
+                                        ForEach(pokemon.types, id: \.self) { type in
                                             Text(type.capitalized)
                                                 .font(.subheadline)
                                                 .fontWeight(.semibold)
@@ -113,7 +117,7 @@ struct ContentView: View {
                                     systemImage: "star") {
                                         pokemon.favorite.toggle()
                                         do {
-                                            try viewContext.save()
+                                            try modelContext.save()
                                         } catch {
                                             print(error)
                                         }
@@ -122,7 +126,7 @@ struct ContentView: View {
                             }
                         }
                     } footer: {
-                        if all.count < 151 {
+                        if pokedex.count < 151 {
                             ContentUnavailableView {
                                 Label("Missing Pokémon", image: .nopokemon)
                             } description: {
@@ -138,15 +142,16 @@ struct ContentView: View {
                 .navigationTitle("Pokedex")
                 .searchable(text: $searchText, prompt: "Find a Pokémon")
                 .autocorrectionDisabled()
-                .onChange(of: searchText) {
-                    pokedex.nsPredicate = dynamicPredicate
-                }
-                .onChange(of: filterByFavorites) {
-                    pokedex.nsPredicate = dynamicPredicate
-                }
+//                These onChange modifiers are removed because the predicates will change for SwiftData
+//                .onChange(of: searchText) {
+//                    pokedex.nsPredicate = dynamicPredicate
+//                }
+//                .onChange(of: filterByFavorites) {
+//                    pokedex.nsPredicate = dynamicPredicate
+//                }
                 .navigationDestination(for: Pokemon.self) { pokemon in
-                    PokemonDetail()
-                        .environmentObject(pokemon)
+                    PokemonDetail(pokemon: pokemon)
+//                        .environmentObject(pokemon) // This intriduces problems with SwiftData
                 }
                 
                 .toolbar {
@@ -171,20 +176,8 @@ struct ContentView: View {
             for i in id..<152 {
                 do {
                     let fetchedPokemon = try await fetcher.fetchPokemon(i)
-                    
-                    //                    Set the fetchedPokemon in terms of the database storage
-                    let pokemon = Pokemon(context: viewContext)
-                    pokemon.id = fetchedPokemon.id
-                    pokemon.name = fetchedPokemon.name
-                    pokemon.types = fetchedPokemon.types
-                    pokemon.hp = fetchedPokemon.hp
-                    pokemon.attack = fetchedPokemon.attack
-                    pokemon.defense = fetchedPokemon.defense
-                    pokemon.specialAttack = fetchedPokemon.specialAttack
-                    pokemon.specialDefense = fetchedPokemon.specialDefense
-                    pokemon.speed = fetchedPokemon.speed
-                    pokemon.spriteURL = fetchedPokemon.spriteURL
-                    pokemon.shinyURL = fetchedPokemon.shinyURL
+
+                    modelContext.insert(fetchedPokemon)
                 } catch {
                     print(error)
                 }
@@ -195,13 +188,13 @@ struct ContentView: View {
     
     private func storeSprites() async {
         do {
-            for pokemon in all {
+            for pokemon in pokedex {
 //                We get the content of the tuple at the slot 0
-                pokemon.sprite = try await URLSession.shared.data(from: pokemon.spriteURL!).0
-                pokemon.shiny = try await URLSession.shared.data(from: pokemon.shinyURL!).0
+                pokemon.sprite = try await URLSession.shared.data(from: pokemon.spriteURL).0
+                pokemon.shiny = try await URLSession.shared.data(from: pokemon.shinyURL).0
 //                    Save the fetched Pokémon images
-                try viewContext.save()
-                print("Sprite stored: \(pokemon.id): \(pokemon.name!.capitalized)")
+                try modelContext.save()
+                print("Sprite stored: \(pokemon.id): \(pokemon.name.capitalized)")
             }
          } catch {
              print(error)
@@ -210,5 +203,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    ContentView().modelContainer(PersistenceController.preview)
 }
