@@ -6,15 +6,31 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct danroloPokedexApp: App {
-    let persistenceController = PersistenceController.shared
+//    This is substituted for the SwiftData controller
+//    let persistenceController = PersistenceController.shared
+    var sharedModelContainer: SharedModelContainer = {
+        let schema = Schema([
+            Pokemon.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        
+        do {
+            return try ModelContainer(for: schema, configurations: [ModelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    } ()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+//            This modifier is substituted for SwiftData usage
+//                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .modelContainer(sharedModelContainer)
         }
     }
 }
