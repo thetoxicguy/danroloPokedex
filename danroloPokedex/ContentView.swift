@@ -27,20 +27,20 @@ struct ContentView: View {
     @State var filterByFavorites = false
     
     let fetcher = FetchService()
-    
-    private var dynamicPredicate: NSPredicate {
-        var predicates: [NSPredicate] = []
-//        Search predicate
-        if !searchText.isEmpty {
-            predicates.append(NSPredicate(format: "name CONTAINS[c] %@", searchText))
+
+//    SwiftData predicates
+    private var dynamicPredicate: Predicate<Pokemon> {
+        #Predicate<Pokemon> { pokemon in
+            if filterByFavorites && !searchText.isEmpty {
+                pokemon.favorite && pokemon.name.localizedStandardContains(searchText)
+            } else if !searchText.isEmpty {
+                pokemon.name.localizedStandardContains(searchText)
+            } else if filterByFavorites {
+                pokemon.favorite
+            } else {
+                true
+            }
         }
-//        Filter by predicate
-        if filterByFavorites {
-            predicates.append(NSPredicate(format: "favorite == %d" , true))
-        }
-        
-//        Combine predicates
-        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     }
     
     var body: some View {
@@ -59,7 +59,7 @@ struct ContentView: View {
             NavigationStack {
                 List {
                     Section {
-                        ForEach(pokedex) { pokemon in
+                        ForEach((try? pokedex.filter(dynamicPredicate)) ?? pokedex) { pokemon in
                             //                    Usual code:
                             //                    NavigationLink {
                             //                        Text(pokemon.name ?? "No name")
@@ -142,6 +142,7 @@ struct ContentView: View {
                 .navigationTitle("Pokedex")
                 .searchable(text: $searchText, prompt: "Find a Pokémon")
                 .autocorrectionDisabled()
+                .animation(.default, value: searchText)
 //                These onChange modifiers are removed because the predicates will change for SwiftData
 //                .onChange(of: searchText) {
 //                    pokedex.nsPredicate = dynamicPredicate
@@ -157,7 +158,9 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
-                            filterByFavorites.toggle()
+                            withAnimation {
+                                filterByFavorites.toggle()
+                            }
                         } label: {
                             Label("Filter by Favorites", systemImage: filterByFavorites ? "star.fill" : "star")
                         }
